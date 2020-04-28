@@ -6,15 +6,6 @@
 <meta name="msapplication-tap-highlight" content="no" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Falling Game</title>
-<link rel="apple-touch-icon" sizes="180x180" href="images/favicons/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="images/favicons/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="images/favicons/favicon-16x16.png">
-<link rel="manifest" href="images/favicons/site.webmanifest">
-<link rel="mask-icon" href="images/favicons/safari-pinned-tab.svg" color="#5bbad5">
-<link rel="shortcut icon" href="images/favicons/favicon.ico">
-<meta name="msapplication-TileColor" content="#80deea">
-<meta name="msapplication-config" content="images/favicons/browserconfig.xml">
-<meta name="theme-color" content="#ffffff">
 
 <link href="https://fonts.googleapis.com/css?family=Rubik:400,500" rel="stylesheet">
 <script src="https://kit.fontawesome.com/1cadbbd35f.js" crossorigin="anonymous"></script>
@@ -23,7 +14,7 @@
 <style>
 *{margin:0; border:0; outline:0; padding:0; box-sizing: border-box;}
 html, body {height: 100%; font-size: 16px;}
-body{background-color: #78a50d; background-image: url("https://www.transparenttextures.com/patterns/groovepaper.png"); max-width:768px; margin: 0 auto; font-family: 'Rubik', sans-serif; height: 100vh;}
+body{background-color: #78a50d; background-image: url("https://www.transparenttextures.com/patterns/groovepaper.png"); margin: 0 auto; overflow:hidden; font-family: 'Rubik', sans-serif;}
 
     body {
     background-color:white;
@@ -31,13 +22,78 @@ body{background-color: #78a50d; background-image: url("https://www.transparentte
 canvas {
     border:1px solid black;
 }
+
+#your_div_id{
+    position: absolute;
+    bottom: 2em;
+    left:0;
+    width: 50px;
+    height: 10px;
+    background: red;
+}
+
+.gameboard{
+    width:100%;
+    height: 100vh;
+    border: red 1px solid;
+    background: grey;
+    position: relative;
+    padding:20px;
+ }
+
+ .player{
+     position: absolute;
+    bottom: 0;
+    left:20;
+    width: 200px;
+    height: 30px;
+    background: red;   
+ }
+
+.item{
+    font-size:40px; 
+    position:absolute;
+    transition: transform 1.5s linear;
+    cursor: pointer;
+    z-index:100;
+    overflow:hidden;
+    border-radius:100px;
+    
+}
+.bad{
+    color: white;   
+ }
+.good{
+    color: cyan;   
+ }
+
+.score{   
+    position:absolute;
+    top:10px;
+    right:10px;
+    padding:10px;
+     background:#fff;
+     color:#000;
+
+ }
 </style>
 </head>
 
 <body>
-<button id="start">Start Game</button><br>
-<h4>Use left-right arrows. Avoid falling blocks</h4>
-<canvas id="canvas" width=350 height=300></canvas>
+
+<div class="gameboard">
+
+<div class="score"></div>
+
+<div class="item bad"><i class="fas fa-skull"></i></div>
+<div class="item bad"><i class="fas fa-skull"></i></div>
+<div class="item bad"><i class="fas fa-skull"></i></div>
+<div class="item good"><i class="far fa-gem"></i></div>
+<div class="item good"><i class="far fa-gem"></i></div>
+<div class="item good"><i class="far fa-gem"></i></div>
+
+<div class="player"></div>
+</div>
 
 <audio preload="auto" class="snort" >
   <source src="snort.mp3">
@@ -46,159 +102,100 @@ canvas {
 <script src="https://code.jquery.com/jquery-latest.min.js" type="text/javascript"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
 <!--script src="js/jquery.ui.touch-punch.min.js" type="text/javascript"></script-->
-<script>
-//canvas variables
-var canvas = document.getElementById("canvas");
-var ctx = canvas.getContext("2d");
+
+<script type="text/javascript">
 
 // game variables
 var startingScore = 50;
-var continueAnimating = false;
-var score;
+var score = startingScore;
+var player = $('.player');
+var gameboard = $('.gameboard');
+var gbwidth = gameboard.innerWidth();
+var gbheight = gameboard.innerHeight();
 
-// block variables
-var blockWidth = 30;
-var blockHeight = 15;
-var blockSpeed = 10;
-var block = {
-    x: 0,
-    y: canvas.height - blockHeight,
-    width: blockWidth,
-    height: blockHeight,
-    blockSpeed: blockSpeed
-}
+$('.score').text(score);
 
-// rock variables
-var rockWidth = 15;
-var rockHeight = 15;
-var totalRocks = 10;
-var rocks = [];
-for (var i = 0; i < totalRocks; i++) {
-    addRock();
-}
+//move player
+$(document).on('mousemove', function(e){
 
-function addRock() {
-    var rock = {
-        width: rockWidth,
-        height: rockHeight
+    player.x = e.pageX + 20;
+
+    if (player.x <= 20) {
+        player.x = 20;
     }
-    resetRock(rock);
-    rocks.push(rock);
-}
-
-// move the rock to a random position near the top-of-canvas
-// assign the rock a random speed
-function resetRock(rock) {
-    rock.x = Math.random() * (canvas.width - rockWidth);
-    rock.y = 15 + Math.random() * 30;
-    rock.speed = 0.2 + Math.random() * 0.5;
-}
-
-
-//left and right keypush event handlers
-document.onkeydown = function (event) {
-    if (event.keyCode == 39) {
-        block.x += block.blockSpeed;
-        if (block.x >= canvas.width - block.width) {
-            continueAnimating = false;
-            alert("Completed with a score of " + score);
-        }
-    } else if (event.keyCode == 37) {
-        block.x -= block.blockSpeed;
-        if (block.x <= 0) {
-            block.x = 0;
-        }
-    }
-}
-
-
-function animate() {
-
-    // request another animation frame
-
-    if (continueAnimating) {
-        requestAnimationFrame(animate);
+    if (player.x >= gbwidth - player.outerWidth() - 20) {
+        player.x = gbwidth - player.outerWidth() - 20;
     }
 
-    // for each rock
-    // (1) check for collisions
-    // (2) advance the rock
-    // (3) if the rock falls below the canvas, reset that rock
+    $(player).css({left: player.x}).text(player.x+'+'+gbwidth);
 
-    for (var i = 0; i < rocks.length; i++) {
+});
+ 
 
-        var rock = rocks[i];
-
-        // test for rock-block collision
-        if (isColliding(rock, block)) {
-            score -= 10;
-            resetRock(rock);
-        }
-
-        // advance the rocks
-        rock.y += rock.speed;
-
-        // if the rock is below the canvas,
-        if (rock.y > canvas.height) {
-            resetRock(rock);
-        }
-
+var overlaps = (function () {
+    function getPositions( elem ) {
+        var pos, width, height;
+        pos = $( elem ).position();
+        width = $( elem ).width();
+        height = $( elem ).height();
+        return [ [ pos.left, pos.left + width ], [ pos.top, pos.top + height ] ];
     }
 
-    // redraw everything
-    drawAll();
-
-}
-
-function isColliding(a, b) {
-    return !(
-    b.x > a.x + a.width || b.x + b.width < a.x || b.y > a.y + a.height || b.y + b.height < a.y);
-}
-
-function drawAll() {
-
-    // clear the canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // draw the background
-    // (optionally drawImage an image)
-    ctx.fillStyle = "ivory";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // draw the block
-    ctx.fillStyle = "skyblue";
-    ctx.fillRect(block.x, block.y, block.width, block.height);
-    ctx.strokeStyle = "lightgray";
-    ctx.strokeRect(block.x, block.y, block.width, block.height);
-
-    // draw all rocks
-    for (var i = 0; i < rocks.length; i++) {
-        var rock = rocks[i];
-        // optionally, drawImage(rocksImg,rock.x,rock.y)
-        ctx.fillStyle = "gray";
-        ctx.fillRect(rock.x, rock.y, rock.width, rock.height);
+    function comparePositions( p1, p2 ) {
+        var r1, r2;
+        r1 = p1[0] < p2[0] ? p1 : p2;
+        r2 = p1[0] < p2[0] ? p2 : p1;
+        return r1[1] > r2[0] || r1[0] === r2[0];
     }
 
-    // draw the score
-    ctx.font = "14px Times New Roman";
-    ctx.fillStyle = "black";
-    ctx.fillText("Score: " + score, 10, 15);
-}
-
-// button to start the game
-$("#start").click(function () {
-    score = startingScore
-    block.x = 0;
-    for (var i = 0; i < rocks.length; i++) {
-        resetRock(rocks[i]);
-    }
-    if (!continueAnimating) {
-        continueAnimating = true;
-        animate();
+    return function ( a, b ) {
+        var pos1 = getPositions( a ),
+            pos2 = getPositions( b );
+        return comparePositions( pos1[0], pos2[0] ) && comparePositions( pos1[1], pos2[1] );
     };
+})();
+
+function random(min,max){
+    return Math.round(Math.random() * (max-min) + min);
+}
+
+$( ".bad,.good" ).each(function() {
+    var $this = $(this);
+    var length = random(10, (gbwidth - 10));
+
+    $(this).css({"left": length,"top":-50});  
 });
 
-  
+setInterval(function(){
+    $( ".bad,.good" ).each(function() {
+        var $this = $(this);
+        var eltop = parseInt($this.css('top'), 10);
+        var length = random(10, (gbwidth - 10));
+
+        if(eltop > gbheight){
+            $this.css({"left": length,"top":random(0, -200)});
+        }else{
+            $this.css('top', '+='+random(10, 60));
+        }
+
+        if(overlaps($this, player) === true){
+            $this.css({"left": length,"top": -50});
+
+            if($this.hasClass('bad')){
+               score = score -= 10; 
+            }else{
+               score = score += 10;
+            }
+            
+            $('.score').text(score);
+        }
+    });
+}, 800);
+
+
+
 </script>
+
+
 </body>
 </html>
